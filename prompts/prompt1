@@ -38,3 +38,10 @@ Enforce all of these with Postgres RLS, not only in route handlers.
 - Contact details (phone, email) follow the same rule as exact address.
 - Subscription and billing state is readable only by the contractor
   who owns it.``
+
+Output:
+-A written plan of the architecture
+-A fully working matching engine application available at localhost:3000
+-A claude.md file describing the project -what it does, how to run it, tech stack, folder structure, whats coming next.  Keep under 200 lines.
+-A docs/folder with a decision log file named with todays date (e.g. docs/2026-09-20-initial-build.md) recording what was built, what technical decisions were made and why.
+-run the app for preview at the end.
