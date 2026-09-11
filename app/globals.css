@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* HireHand — warm paper surfaces, deep teal for action, clay for attention.
+   Trade-services feel: legible, a little utilitarian, not a SaaS template. */
+:root {
+  --paper: #f7f4ef;
+  --surface: #fffdfa;
+  --surface-sunken: #efe9e0;
+  --ink: #1f1b16;
+  --ink-soft: #6b6157;
+  --line: #e0d7ca;
+  --brand: #0e6a62;
+  --brand-soft: #d9ece9;
+  --brand-ink: #0a4f49;
+  --clay: #b4552b;
+  --clay-soft: #f8e6dc;
+  --gold: #a67c00;
+  --gold-soft: #f7eccd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #17140f;
+    --surface: #201c16;
+    --surface-sunken: #2a251d;
+    --ink: #f3ede3;
+    --ink-soft: #a79c8d;
+    --line: #383127;
+    --brand: #4fb3a6;
+    --brand-soft: #10322f;
+    --brand-ink: #8fd5ca;
+    --clay: #e0885f;
+    --clay-soft: #3a231a;
+    --gold: #d9ab3c;
+    --gold-soft: #35291068;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-surface;
+  }
+
+  /* Tailwind 4 will not @apply a custom class, so the shared button base is a
+     grouped selector rather than a `.btn` the variants extend. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2
+           text-sm font-medium transition-colors disabled:cursor-not-allowed
+           disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply bg-brand text-white hover:bg-brand-ink;
+  }
+  .btn-secondary {
+    @apply border border-line bg-surface text-ink hover:bg-sunken;
+  }
+  .btn-ghost {
+    @apply text-ink-soft hover:bg-sunken hover:text-ink;
+  }
+  .btn-danger {
+    @apply border border-clay/40 text-clay hover:bg-clay-soft;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm
+           text-ink outline-none placeholder:text-ink-soft/60
+           focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide
+           text-ink-soft;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
+           font-medium;
+  }
+
+  .meta {
+    @apply text-sm text-ink-soft;
+  }
+}
