@@ -1,0 +1,10 @@
+Context: I have an empty project folder with just a .env file and a .gitignore file.  
+I want to build a job matching application where users submit job requests and contractors can bid on the job requests. The application should be web app first but should also run on mobile with minimal code changes.
+
+Instruciton: 
+First plan out the architecture: componentes, data structures, how the ui flows.
+Then build the entire app. Use react and nextjs as the technologies. Use typescript and Tailwind CSS
+Save the test data in a local database for now so it persists across page refresh
+After everything is working, create documentation.  Don't ask me amy questions -just plan it, build it and document it.
+
+
