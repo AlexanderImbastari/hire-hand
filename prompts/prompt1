@@ -8,6 +8,7 @@ Save the test data in a local database for now so it persists across page refres
 After everything is working, create documentation.  Don't ask me amy questions -just plan it, build it and document it.
 
 Input:
+-entities: user posts the job, contractors pick up the job for execution.
 - Use 2 users called user1 and user2.  
 - Use 2 contractors called contractor1 and contractor2 in different geographic locations.
 - Single page app
