@@ -1,10 +1,40 @@
 Context: I have an empty project folder with just a .env file and a .gitignore file.  
 I want to build a job matching application where users submit job requests and contractors can bid on the job requests. The application should be web app first but should also run on mobile with minimal code changes.
 
-Instruciton: 
+Instruction: 
 First plan out the architecture: componentes, data structures, how the ui flows.
 Then build the entire app. Use react and nextjs as the technologies. Use typescript and Tailwind CSS
 Save the test data in a local database for now so it persists across page refresh
 After everything is working, create documentation.  Don't ask me amy questions -just plan it, build it and document it.
 
+Input:
+- Use 2 users called user1 and user2.  
+- Use 2 contractors called contractor1 and contractor2 in different geographic locations.
+- Single page app
+- Login page for users and contractors
+- Default page for user should be a list of existing jobs that were submitted and also a button to be able to add another job. Shouldbe able to do CRUD operations on existing jobs as long as it hasn't been matched yet. Once it is matched the CRUD operations will be not be allowed
+-Default page for contractos should be a list of jobs that meet the search criterias for the contractor. 
+Should also have a l ist of jobs that were matched. Once the job has been matched no further CRUD is possible.
+-Each job should have location, type of job,  timeframe.
+-location shall be by zipcode
+-Job type shall be for now: plumbing, electrical, landscaping.
+-the app should run using npm run dev
 
+-
+- **subscription** — a contractor's paid access. Stripe-backed. contractor pays a monthly fee to get access to the jobs.  Free for users.
+
+-job cycle will be draft → open → accepted → completed, cancelled / expired
+
+Enforce all of these with Postgres RLS, not only in route handlers.
+
+- A user sees only their own jobs.
+- A user sees all quotes on their own jobs, and nothing on others'.
+- A contractor sees all `open` jobs, plus jobs they have quoted on.
+- A contractor sees only their own quotes. Never another contractor's
+  price.
+- Job location is city + zip while `open`. Exact address is readable
+  only by the user and, once the job is `accepted`, the winning
+  contractor.
+- Contact details (phone, email) follow the same rule as exact address.
+- Subscription and billing state is readable only by the contractor
+  who owns it.``
