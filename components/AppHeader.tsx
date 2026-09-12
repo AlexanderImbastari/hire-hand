@@ -23,7 +23,6 @@ export function SiteNav() {
   const setOpen = (next: boolean) => setOpenedOn(next ? pathname : null);
 
   const isContractor = account?.role === 'contractor';
-  const homeHref = isContractor ? '/jobs' : '/';
 
   const links = isContractor
     ? [
@@ -43,7 +42,7 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-canvas">
       <div className="flex items-center gap-5 px-6 py-3.5">
-        <Link href={homeHref} aria-label="HireHand home">
+        <Link href="/" aria-label="HireHand home">
           <Logo size={32} />
         </Link>
 
