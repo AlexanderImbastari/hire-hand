@@ -8,8 +8,9 @@ HireHand — a job-matching marketplace. Homeowners post jobs; approved contract
 browse the ones in their area and trade, and bid on them; the homeowner accepts a
 winning quote, which matches the job and unlocks the exact address for the winner.
 
-**Phase 1 (current)**: no auth, no database. You sign in by picking one of four
-fixture identities, and the whole domain runs against `localStorage`.
+**Phase 1 (current)**: no passwords, no database. Signing up picks a role and
+creates an account; logging in is an email lookup. The whole domain runs against
+`localStorage`, with four seeded fixture accounts to start from.
 
 ## Commands
 
@@ -17,14 +18,15 @@ fixture identities, and the whole domain runs against `localStorage`.
 npm run dev      # http://localhost:3000
 npm run build    # production build (also typechecks)
 npm run lint     # eslint, incl. React compiler rules
-npm run verify   # drives the domain rules headlessly — 46 assertions
+npm run verify   # drives the domain rules headlessly — 63 assertions
 npx tsc --noEmit # typecheck alone
 ```
 
 `npm run verify` (`scripts/verify-rules.ts`) is the fastest way to know the domain
 still behaves: it exercises visibility, matching, the free-quote allowance, billing
-states, and the lifecycle against `shared/data.ts` with no browser involved. Run it
-after touching anything in `shared/`.
+states, signup and login, and the lifecycle against `shared/data.ts` with no browser
+involved. Run it after touching anything in `shared/` — and when you add a function
+there, add assertions for it in the same change.
 
 ## Architecture
 
@@ -34,18 +36,26 @@ with Postgres queries and RLS policies without changing a single signature, so
 nothing above it needs to change.
 
 ```
-app/          Next.js App Router. Real routes; SessionProvider sits in the root layout.
-  page.tsx       Landing (public, server component)
-  pricing/       Plans (contractor-facing; homeowners get redirected)
-  login/         Phase-1 identity picker
-  jobs/          Contractor browse
-  jobs/[id]/     Contractor job detail + quote panel
-  jobs/new/      Homeowner post-a-job (also ?edit=<id>)
-  dashboard/     Homeowner jobs + quotes received
-  quotes/        Contractor's own quotes
-  styleguide/    Internal design-system reference (not product surface)
+app/          Next.js App Router. SessionProvider sits in the root layout.
+  page.tsx           Landing (public, server component)
+  pricing/           Plans (contractor-facing; homeowners get an interstitial)
+  styleguide/        Internal design-system reference (not product surface)
+  (auth)/
+    login/           Email lookup — no role selector, the account knows its role
+    signup/          The one place a role is ever chosen
+  (homeowner)/       layout.tsx guards: role must be `user`
+    jobs/            Their posted jobs
+    jobs/new/        Post a job (also ?edit=<id>)
+    jobs/[id]/       Job detail + the quotes on it
+    account/         Profile. No billing surface, ever
+  (contractor)/      layout.tsx guards: role must be `contractor` AND approved
+    browse/          Open jobs in their trades and area
+    browse/[id]/     Job detail + quote panel
+    quotes/          Quotes they have sent
+    subscription/    Their own plan and quote allowance
 components/   All UI. Imports data only through shared/data.ts.
-  ui/            Design-system primitives (Logo, Field, Illustration)
+  RoleLayout.tsx     The guard both route groups delegate to
+  ui/                Design-system primitives (Logo, Field, Illustration)
 shared/       Platform-agnostic domain core — no React, no Next. A mobile app reuses it verbatim.
   types.ts       Domain rows + the viewer-scoped view types
   fixtures.ts    The four phase-1 identities and seed jobs/quotes
@@ -60,8 +70,15 @@ prompts/      The original spec. Domain, offer catalog and design system live in
 docs/         Build notes, dated.
 ```
 
-Routes are guarded by `RequireUser` / `RequireContractor` in `components/App.tsx`.
-An unapproved contractor is stopped there, at the route — not by hiding UI.
+**One account, one role, fixed at signup.** Someone who is both a homeowner and a
+contractor makes two accounts. That is why login has no "are you a homeowner or a
+contractor?" picker — offering one would imply a single login could be either, and
+every downstream question ("can this person quote?", "whose address is this?")
+stops being answerable from the account alone.
+
+Guarding lives in each group's `layout.tsx`, not on individual pages, so a new
+route inside a group is protected the moment the file exists rather than when
+someone remembers to wrap it. An unapproved contractor is stopped there too.
 
 ### Three invariants worth preserving
 
@@ -118,6 +135,12 @@ billing surface area without asking.
   `components/DevPanel.tsx` — a test harness for approval and billing states, since
   neither Stripe nor the approval workflow exists yet. Not product surface.
 - `shared/session.ts` — replaced by real auth
+- Login takes an email and no password: there is no credential store yet. The
+  demo-account list under the field goes when real auth lands.
+- Signup approves contractors on the spot. Approval is a genuine precondition
+  (see the domain doc) but nothing grants it yet, so leaving new contractors
+  unapproved would dead-end every signup. `DevPanel` still flips the flag to
+  exercise the gate.
 - `/styleguide` — internal reference; it is not a product route
 - The landing page's per-trade open-job counts are marketing figures. There is no
   un-authenticated aggregate in the data layer; wire them to one in phase 2.
@@ -151,7 +174,8 @@ billing surface area without asking.
 
 1. Postgres behind `shared/data.ts`, with the `policy.ts` predicates reimplemented as
    RLS policies — the rules get enforced by the database rather than by convention.
-2. Real auth replacing the identity picker.
+2. Real auth: passwords and a credential store behind `findAccountByEmail`,
+   replacing phase 1's email-only lookup.
 3. Stripe for Contractor Pro; the billing states already exist in the model.
 4. A contractor approval workflow (undesigned — see the domain doc).
 5. Photo upload (today photos are URLs).

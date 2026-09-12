@@ -130,6 +130,55 @@ async function main() {
   await throws('a homeowner has no subscription to read', () => data.getSubscription(u1));
   check('contractor reads own subscription only', (await data.getSubscription(c2))?.contractorId === 'contractor2');
 
+  console.log('\n— Signup: role is chosen once, and is the whole identity —');
+  const newOwner = await data.createAccount({
+    role: 'user', name: 'Nia Okafor', email: 'Nia@Example.com', phone: '(415) 555-0155',
+  });
+  check('signup returns the chosen role', newOwner.role === 'user');
+  check('email is normalised to lower case', newOwner.email === 'nia@example.com');
+  await throws('a second account cannot reuse an email', () =>
+    data.createAccount({ role: 'user', name: 'Imposter', email: 'NIA@example.com', phone: '1' }));
+  await throws('role cannot be reused across sides either', () =>
+    data.createAccount({
+      role: 'contractor', name: 'Imposter', email: 'nia@example.com', phone: '1',
+      company: 'C', serviceZips: ['94110'], jobTypes: ['plumbing'],
+    }));
+  await throws('an account needs an email', () =>
+    data.createAccount({ role: 'user', name: 'Nameless', email: '   ', phone: '1' }));
+
+  const newPro = await data.createAccount({
+    role: 'contractor', name: 'Sam Reyes', email: 'sam@reyes.example.com', phone: '(415) 555-0166',
+    company: 'Reyes Plumbing', serviceZips: ['94110'], jobTypes: ['plumbing'],
+  });
+  check('new contractor carries its trades and area',
+    newPro.role === 'contractor' && newPro.serviceZips.includes('94110') && newPro.jobTypes.includes('plumbing'));
+  // Phase 1 approves on signup: nothing grants approval yet, so leaving this
+  // false would dead-end every contractor. The gate itself is still enforced —
+  // see the approval section above.
+  check('new contractor is usable immediately', newPro.role === 'contractor' && newPro.approved);
+  check('new contractor starts with a full free allowance',
+    newPro.role === 'contractor' && newPro.freeQuotesUsed === 0);
+
+  // Serves 94110 and plumbing only, so the matching engine should hand back
+  // job-1 and job-6 and nothing outside that trade or area.
+  const proSession: Session = { actorId: newPro.id, role: 'contractor' };
+  const proSees = await data.listOpenJobsForContractor(proSession);
+  check('a brand-new contractor can browse straight away', proSees.length > 0);
+  check('and sees only its own trade and area',
+    proSees.every((j) => j.type === 'plumbing' && j.zip === '94110'));
+  const proAllow = await data.getQuoteAllowance(proSession);
+  check('and has 3 of 3 free quotes', proAllow.remaining === 3 && proAllow.canQuote);
+
+  console.log('\n— Login: the account knows its own role —');
+  check('lookup is case-insensitive', (await data.findAccountByEmail('DANA@EXAMPLE.COM'))?.id === 'user1');
+  check('lookup tolerates surrounding space', (await data.findAccountByEmail('  dana@example.com '))?.id === 'user1');
+  check('an unknown email resolves to nothing', (await data.findAccountByEmail('nobody@example.com')) === null);
+  check('a homeowner email yields role user', (await data.findAccountByEmail('dana@example.com'))?.role === 'user');
+  check('a contractor email yields role contractor',
+    (await data.findAccountByEmail('ray@okonkwo-pe.example.com'))?.role === 'contractor');
+  check('the account just created can log back in',
+    (await data.findAccountByEmail('sam@reyes.example.com'))?.id === newPro.id);
+
   console.log(`\n${pass} passed, ${fail} failed\n`);
   process.exit(fail ? 1 : 0);
 }
