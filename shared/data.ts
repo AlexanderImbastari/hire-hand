@@ -37,6 +37,7 @@ import type {
   QuoteInput,
   QuoteView,
   Session,
+  SignupInput,
   Subscription,
   User,
 } from './types';
@@ -189,9 +190,67 @@ function requireOwnedJob(session: Session, jobId: string): Job {
  * Accounts
  * ---------------------------------------------------------------------- */
 
-/** The phase-1 identity picker. Replaced by real auth in phase 2. */
+/** The phase-1 demo-account helper. Replaced by real auth in phase 2. */
 export async function listAccounts(): Promise<Account[]> {
   return structuredClone(getState().accounts);
+}
+
+/**
+ * Sign in by email. No password in phase 1 — there is no credential store yet,
+ * so this looks the account up and hands back its role for the caller to route
+ * on. Phase 2 swaps the body for a real credential check; the signature holds.
+ */
+export async function findAccountByEmail(
+  email: string,
+): Promise<Account | null> {
+  const match = getState().accounts.find(
+    (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+  return match ? structuredClone(match) : null;
+}
+
+/**
+ * Create an account. Role is chosen here and never again.
+ *
+ * Phase 1 approves contractors on the spot: approval is a real precondition
+ * (see context/domain.md) but the workflow that grants it does not exist yet,
+ * so leaving new contractors unapproved would dead-end every signup. `DevPanel`
+ * can still flip the flag to exercise the gate. Phase 2 replaces this with the
+ * actual approval queue.
+ */
+export async function createAccount(input: SignupInput): Promise<Account> {
+  const email = input.email.trim().toLowerCase();
+  if (!email) throw new PolicyError('An email address is required.');
+  if (await findAccountByEmail(email)) {
+    throw new PolicyError('An account with that email already exists.');
+  }
+
+  return mutate((state) => {
+    const id = `${input.role === 'user' ? 'user' : 'contractor'}-${Date.now()}`;
+    const account: Account =
+      input.role === 'user'
+        ? {
+            id,
+            role: 'user',
+            name: input.name.trim(),
+            email,
+            phone: input.phone.trim(),
+          }
+        : {
+            id,
+            role: 'contractor',
+            name: input.name.trim(),
+            company: input.company.trim(),
+            email,
+            phone: input.phone.trim(),
+            approved: true,
+            serviceZips: input.serviceZips,
+            jobTypes: input.jobTypes,
+            freeQuotesUsed: 0,
+          };
+    state.accounts.push(account);
+    return structuredClone(account);
+  });
 }
 
 export async function getAccount(session: Session): Promise<Account> {

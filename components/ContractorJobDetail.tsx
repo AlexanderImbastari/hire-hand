@@ -33,7 +33,7 @@ export function ContractorJobDetail({
   return (
     <div className="px-6 pb-16 pt-7 sm:px-12">
       <Link
-        href="/jobs"
+        href="/browse"
         className="text-[13px] font-semibold text-ink-500 transition-colors duration-150 hover:text-ink-900"
       >
         ← Back to open jobs

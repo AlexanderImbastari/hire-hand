@@ -57,7 +57,7 @@ export function ContractorQuotes() {
             You haven&rsquo;t sent a quote yet. Browsing is free — the first
             three quotes are too.
           </p>
-          <Link href="/jobs" className="btn-primary mt-5">
+          <Link href="/browse" className="btn-primary mt-5">
             Browse open jobs
           </Link>
         </div>
@@ -66,7 +66,7 @@ export function ContractorQuotes() {
           {jobs.map((job) => (
             <Link
               key={job.id}
-              href={`/jobs/${job.id}`}
+              href={`/browse/${job.id}`}
               className="flex flex-wrap items-center gap-5 rounded-lg border border-line bg-canvas px-6 py-[22px] transition-colors duration-150 hover:border-ink-900"
             >
               <JobPhoto

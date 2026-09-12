@@ -58,7 +58,7 @@ export default function PricingPage() {
             No posting fee, no booking fee, no commission. Contractor Pro is a
             contractor-side subscription and never affects what you pay.
           </p>
-          <Link href="/dashboard" className="btn-primary mt-7">
+          <Link href="/jobs" className="btn-primary mt-7">
             Back to your jobs
           </Link>
         </main>

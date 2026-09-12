@@ -201,6 +201,28 @@ export interface QuoteAllowance {
     | 'free_quotes_exhausted';
 }
 
+/**
+ * What signup collects. Role is chosen there and is fixed for the life of the
+ * account: an account is a homeowner or a contractor, never both. Someone who
+ * needs both makes a second account.
+ */
+export type SignupInput =
+  | {
+      role: 'user';
+      name: string;
+      email: string;
+      phone: string;
+    }
+  | {
+      role: 'contractor';
+      name: string;
+      email: string;
+      phone: string;
+      company: string;
+      serviceZips: string[];
+      jobTypes: JobType[];
+    };
+
 export interface JobInput {
   type: JobType;
   title: string;

@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import { use, useCallback, useEffect, useState } from 'react';
-import { RequireContractor } from '@/components/App';
-import { SiteNav } from '@/components/AppHeader';
 import { ContractorJobDetail } from '@/components/ContractorJobDetail';
 import { useRequiredSession } from '@/components/SessionProvider';
 import {
@@ -12,7 +10,7 @@ import {
   submitQuote,
   withdrawQuote,
 } from '@/shared/data';
-import type { Contractor, JobPublicView, QuoteAllowance } from '@/shared/types';
+import type { JobPublicView, QuoteAllowance } from '@/shared/types';
 
 export default function JobDetailPage({
   params,
@@ -20,25 +18,10 @@ export default function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  return (
-    <RequireContractor>
-      {(contractor) => (
-        <>
-          <SiteNav />
-          <JobDetailBody jobId={id} contractor={contractor} />
-        </>
-      )}
-    </RequireContractor>
-  );
+  return <JobDetailBody jobId={id} />;
 }
 
-function JobDetailBody({
-  jobId,
-  contractor,
-}: {
-  jobId: string;
-  contractor: Contractor;
-}) {
+function JobDetailBody({ jobId }: { jobId: string }) {
   const { session, revision, refresh } = useRequiredSession();
   const [job, setJob] = useState<JobPublicView | null>(null);
   const [allowance, setAllowance] = useState<QuoteAllowance | null>(null);
@@ -59,7 +42,7 @@ function JobDetailBody({
     return () => {
       live = false;
     };
-  }, [session, revision, jobId, contractor.id]);
+  }, [session, revision, jobId]);
 
   const run = useCallback(
     async (fn: () => Promise<unknown>) => {
@@ -87,7 +70,7 @@ function JobDetailBody({
           It may have been withdrawn, matched with another contractor, or it
           falls outside your service area.
         </p>
-        <Link href="/jobs" className="btn-primary mt-7">
+        <Link href="/browse" className="btn-primary mt-7">
           Back to open jobs
         </Link>
       </main>

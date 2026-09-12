@@ -117,10 +117,10 @@ export default function LandingPage() {
             </p>
           </div>
           <Link
-            href="/jobs"
+            href="#how-it-works"
             className="text-[13px] font-bold text-ink-900 transition-colors duration-150 hover:text-orange-500"
           >
-            See all open jobs ↗
+            How it works ↗
           </Link>
         </div>
 
@@ -143,7 +143,7 @@ export default function LandingPage() {
                 {trade.openJobs} open jobs
               </p>
               <Link
-                href="/jobs/new"
+                href="/signup?role=user"
                 className={`mt-[22px] rounded-full px-[22px] py-3 text-[13.5px] font-bold transition-colors duration-150 ${
                   trade.tinted
                     ? 'bg-ink-900 text-white hover:bg-ink-800'
@@ -158,7 +158,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="px-6 py-20 sm:px-12">
+      <section id="how-it-works" className="scroll-mt-20 px-6 py-20 sm:px-12">
         <div className="mb-9 text-center">
           <h2 className="text-[26px] font-extrabold tracking-[-0.02em] sm:text-[30px]">
             How HireHand works
@@ -208,11 +208,11 @@ export default function LandingPage() {
               for unlimited.
             </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
-              <Link href="/login" className="btn-pill-primary">
+              <Link href="/signup?role=contractor" className="btn-pill-ghost">
                 Apply as a contractor
               </Link>
-              <Link href="/jobs" className="btn-pill-ghost">
-                Browse open jobs
+              <Link href="/pricing" className="btn-pill-ghost">
+                See pricing
               </Link>
             </div>
           </div>

@@ -109,7 +109,7 @@ export function JobForm() {
         await createJob(session, input, { publish });
       }
       refresh();
-      router.push('/dashboard');
+      router.push('/jobs');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);

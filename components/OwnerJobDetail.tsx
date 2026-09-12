@@ -60,7 +60,12 @@ export function OwnerJobDetail({
 
         <div className="min-w-[200px] flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="text-[17px] font-bold">{job.title}</h2>
+            <Link
+              href={`/jobs/${job.id}`}
+              className="text-[17px] font-bold transition-colors duration-150 hover:text-orange-500"
+            >
+              {job.title}
+            </Link>
             <StatusTag status={job.status} />
           </div>
           <p className="mt-1 text-[13px] text-ink-500">{meta}</p>
@@ -77,6 +82,9 @@ export function OwnerJobDetail({
                 Publish
               </button>
             )}
+            <Link href={`/jobs/${job.id}`} className="btn-small">
+              Open
+            </Link>
             <Link href={`/jobs/new?edit=${job.id}`} className="btn-small">
               Edit
             </Link>

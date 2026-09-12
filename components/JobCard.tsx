@@ -11,7 +11,7 @@ import { JobTypeTag } from './StatusBadge';
 export function JobCard({ job }: { job: JobPublicView }) {
   return (
     <Link
-      href={`/jobs/${job.id}`}
+      href={`/browse/${job.id}`}
       className="group block overflow-hidden rounded-[16px] border border-line bg-canvas transition-colors duration-150 ease-out hover:border-ink-900"
     >
       <div className="relative h-[150px]">

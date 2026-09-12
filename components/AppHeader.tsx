@@ -26,18 +26,24 @@ export function SiteNav() {
 
   const links = isContractor
     ? [
-        { href: '/jobs', label: 'Open jobs' },
+        { href: '/browse', label: 'Open jobs' },
         { href: '/quotes', label: 'Your quotes' },
-        { href: '/pricing', label: 'Pricing' },
+        { href: '/subscription', label: 'Subscription' },
       ]
-    : [
-        ...(account ? [{ href: '/dashboard', label: 'Your jobs' }] : []),
-        { href: '/pricing', label: 'For contractors' },
-      ];
+    : account
+      ? [
+          { href: '/jobs', label: 'Your jobs' },
+          { href: '/account', label: 'Account' },
+        ]
+      : [{ href: '/pricing', label: 'For contractors' }];
 
+  // Signed out, the CTA points at signup rather than the gated page behind it:
+  // you cannot post a job without an account, so ask for the account first.
   const cta = isContractor
-    ? { href: '/jobs', label: 'Browse jobs ↗' }
-    : { href: '/jobs/new', label: 'Post a job ↗' };
+    ? { href: '/browse', label: 'Browse jobs ↗' }
+    : account
+      ? { href: '/jobs/new', label: 'Post a job ↗' }
+      : { href: '/signup?role=user', label: 'Post a job ↗' };
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-canvas">
@@ -74,7 +80,7 @@ export function SiteNav() {
               href="/login"
               className="whitespace-nowrap text-[13px] font-semibold text-ink-500 transition-colors duration-150 hover:text-ink-900"
             >
-              Login / Register
+              Log in
             </Link>
           )}
           <Link href={cta.href} className="btn-pill-dark">
@@ -132,7 +138,7 @@ export function SiteNav() {
                 href="/login"
                 className="text-[13px] font-semibold text-ink-500"
               >
-                Login / Register
+                Log in
               </Link>
             )}
           </div>
