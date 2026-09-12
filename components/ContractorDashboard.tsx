@@ -1,232 +1,227 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getQuoteAllowance,
-  getSubscription,
   listMatchedJobsForContractor,
   listOpenJobsForContractor,
-  submitQuote,
-  withdrawQuote,
 } from '@/shared/data';
-import { formatDate, formatPrice, JOB_TYPE_LABELS } from '@/shared/format';
-import type {
-  Contractor,
-  JobPublicView,
-  QuoteAllowance,
-  Subscription,
+import { JOB_TYPE_LABELS, TIMEFRAME_SHORT } from '@/shared/format';
+import {
+  JOB_TYPES,
+  TIMEFRAMES,
+  type Contractor,
+  type JobPublicView,
+  type JobType,
+  type QuoteAllowance,
+  type Timeframe,
 } from '@/shared/types';
-import { AllowanceBanner } from './AllowanceBanner';
-import { ContractorJobDetail } from './ContractorJobDetail';
+import { AllowanceBanner, AllowanceCard } from './AllowanceBanner';
+import { JobCard, JobCardSkeleton } from './JobCard';
 import { useRequiredSession } from './SessionProvider';
-import { JobStatusBadge, QuoteStatusBadge } from './StatusBadge';
+import { Illustration } from './ui/Field';
 
-type Tab = 'open' | 'mine';
+type Sort = 'newest' | 'oldest';
 
+/**
+ * Contractor browse: filters on the left, results on the right.
+ *
+ * The data layer has already narrowed to this contractor's trades and service
+ * area; the sidebar narrows further, client-side, per the README's state notes.
+ */
 export function ContractorDashboard({ contractor }: { contractor: Contractor }) {
-  const { session, revision, refresh } = useRequiredSession();
-  const [tab, setTab] = useState<Tab>('open');
-  const [openJobs, setOpenJobs] = useState<JobPublicView[]>([]);
-  const [myJobs, setMyJobs] = useState<JobPublicView[]>([]);
+  const { session, revision } = useRequiredSession();
+  const [openJobs, setOpenJobs] = useState<JobPublicView[] | null>(null);
+  const [matchedCount, setMatchedCount] = useState(0);
   const [allowance, setAllowance] = useState<QuoteAllowance | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  const [types, setTypes] = useState<JobType[]>([]);
+  const [timeframes, setTimeframes] = useState<Timeframe[]>([]);
+  const [sort, setSort] = useState<Sort>('newest');
+
   useEffect(() => {
-    // An unapproved contractor gets the gate screen below and never reads
-    // these lists, so there is nothing to fetch or clear.
-    if (!contractor.approved) return;
+    let live = true;
     Promise.all([
       listOpenJobsForContractor(session),
       listMatchedJobsForContractor(session),
       getQuoteAllowance(session),
-      getSubscription(session),
     ])
-      .then(([open, mine, quota, sub]) => {
+      .then(([open, mine, quota]) => {
+        if (!live) return;
         setError('');
         setOpenJobs(open);
-        setMyJobs(mine);
+        setMatchedCount(mine.length);
         setAllowance(quota);
-        setSubscription(sub);
       })
-      .catch((e) => setError(e.message));
-  }, [session, revision, contractor.approved]);
+      .catch((e) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
+  }, [session, revision]);
 
-  const run = useCallback(
-    async (fn: () => Promise<unknown>) => {
-      setBusy(true);
-      setError('');
-      try {
-        await fn();
-        refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setBusy(false);
-      }
-    },
-    [refresh],
-  );
-
-  // Approval is a precondition for everything, not a visibility tier.
-  if (!contractor.approved) {
-    return (
-      <div className="card p-10 text-center">
-        <h1 className="text-xl font-semibold tracking-tight">
-          Your account is awaiting approval
-        </h1>
-        <p className="meta mx-auto mt-2 max-w-md">
-          Browsing jobs and sending quotes unlock once HireHand approves your
-          contractor account. Nothing else is available until then.
-        </p>
-      </div>
+  const results = useMemo(() => {
+    const list = (openJobs ?? []).filter(
+      (j) =>
+        (types.length === 0 || types.includes(j.type)) &&
+        (timeframes.length === 0 || timeframes.includes(j.timeframe)),
     );
-  }
-
-  const selected =
-    selectedId !== null
-      ? [...openJobs, ...myJobs].find((j) => j.id === selectedId)
-      : undefined;
-
-  if (selected && allowance) {
-    return (
-      <>
-        {error && <Banner message={error} />}
-        <ContractorJobDetail
-          job={selected}
-          allowance={allowance}
-          busy={busy}
-          onBack={() => setSelectedId(null)}
-          onQuote={(priceCents, message) =>
-            run(() => submitQuote(session, selected.id, { priceCents, message }))
-          }
-          onWithdraw={(quoteId) => run(() => withdrawQuote(session, quoteId))}
-        />
-      </>
+    return list.sort((a, b) =>
+      sort === 'newest'
+        ? b.createdAt.localeCompare(a.createdAt)
+        : a.createdAt.localeCompare(b.createdAt),
     );
-  }
+  }, [openJobs, types, timeframes, sort]);
 
-  const jobs = tab === 'open' ? openJobs : myJobs;
+  function toggle<T>(list: T[], value: T): T[] {
+    return list.includes(value)
+      ? list.filter((v) => v !== value)
+      : [...list, value];
+  }
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {contractor.company}
-          </h1>
-          <p className="meta mt-1">
-            {contractor.jobTypes.map((t) => JOB_TYPE_LABELS[t]).join(' · ')} ·
-            serving {contractor.serviceZips.join(', ')}
-          </p>
-        </div>
-        {allowance && <AllowanceBanner allowance={allowance} />}
-      </div>
-
-      {subscription?.status === 'cancelled' && (
-        <p className="mb-4 rounded-md bg-gold-soft px-4 py-3 text-sm text-gold">
-          Contractor Pro is cancelled. You keep unlimited quotes until{' '}
-          {formatDate(subscription.currentPeriodEnd)}.
+    <div className="flex flex-col lg:flex-row">
+      {/* Filters */}
+      <aside className="shrink-0 border-b border-line bg-surface-alt px-6 py-7 lg:w-[280px] lg:border-b-0 lg:border-r xl:w-[280px]">
+        <p className="text-xs font-bold uppercase tracking-[0.1em] text-ink-400">
+          Filters
         </p>
-      )}
 
-      {error && <Banner message={error} />}
-
-      <div className="mb-4 flex gap-1 border-b border-line">
-        <TabButton
-          active={tab === 'open'}
-          onClick={() => setTab('open')}
-          label={`Open jobs (${openJobs.length})`}
-        />
-        <TabButton
-          active={tab === 'mine'}
-          onClick={() => setTab('mine')}
-          label={`My jobs (${myJobs.length})`}
-        />
-      </div>
-
-      {jobs.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-medium">
-            {tab === 'open' ? 'No open jobs right now' : 'No quotes sent yet'}
-          </p>
-          <p className="meta mx-auto mt-2 max-w-sm">
-            {tab === 'open'
-              ? `You see jobs posted in ${contractor.serviceZips.join(
-                  ' and ',
-                )} for ${contractor.jobTypes
-                  .map((t) => JOB_TYPE_LABELS[t].toLowerCase())
-                  .join(' and ')} work.`
-              : 'Jobs you quote on show up here, win or lose.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {jobs.map((job) => (
-            <button
-              key={job.id}
-              onClick={() => setSelectedId(job.id)}
-              className="card p-5 text-left transition-colors hover:border-brand"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="meta text-xs uppercase tracking-wide">
-                    {JOB_TYPE_LABELS[job.type]} · {job.city}, {job.zip}
-                  </p>
-                  <p className="mt-1 font-medium">{job.title}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <JobStatusBadge status={job.status} />
-                  {job.myQuote && (
-                    <QuoteStatusBadge status={job.myQuote.status} />
-                  )}
-                </div>
-              </div>
-              <p className="meta mt-2 line-clamp-2 text-sm">{job.description}</p>
-              <div className="meta mt-3 flex flex-wrap gap-x-4 text-xs">
-                <span>Posted {formatDate(job.createdAt)}</span>
-                {job.myQuote && (
-                  <span>You quoted {formatPrice(job.myQuote.priceCents)}</span>
+        <p className="mt-5 text-[13px] font-bold">Job type</p>
+        <div className="mt-2.5 flex flex-col gap-2">
+          {JOB_TYPES.map((t) => {
+            const on = types.includes(t);
+            const offered = contractor.jobTypes.includes(t);
+            return (
+              <label
+                key={t}
+                className={`flex items-center gap-2.5 text-sm ${
+                  offered
+                    ? 'cursor-pointer text-ink-700'
+                    : 'cursor-not-allowed text-ink-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={on}
+                  disabled={!offered}
+                  onChange={() => setTypes((prev) => toggle(prev, t))}
+                />
+                <span
+                  aria-hidden
+                  className={`size-4 rounded-[5px] ${
+                    on ? 'bg-orange-500' : 'border border-line-strong'
+                  }`}
+                />
+                {JOB_TYPE_LABELS[t]}
+                {!offered && (
+                  <span className="text-[11px] text-ink-400">not your trade</span>
                 )}
-                {job.exactLocation && <span>Address unlocked</span>}
-              </div>
-            </button>
-          ))}
+              </label>
+            );
+          })}
         </div>
-      )}
+
+        <div className="my-5 h-px bg-line" />
+
+        <p className="text-[13px] font-bold">Service area</p>
+        <p className="mt-2.5 rounded-[10px] border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink-700">
+          {contractor.serviceZips.join(' · ')}
+        </p>
+
+        <div className="my-5 h-px bg-line" />
+
+        <p className="text-[13px] font-bold">Timeframe</p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {TIMEFRAMES.map((tf) => {
+            const on = timeframes.includes(tf);
+            return (
+              <button
+                key={tf}
+                onClick={() => setTimeframes((prev) => toggle(prev, tf))}
+                aria-pressed={on}
+                className={`cursor-pointer rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-150 ${
+                  on
+                    ? 'bg-ink-900 text-white'
+                    : 'border border-line bg-canvas text-ink-700 hover:border-ink-900'
+                }`}
+              >
+                {TIMEFRAME_SHORT[tf]}
+              </button>
+            );
+          })}
+        </div>
+
+        {allowance && <AllowanceCard allowance={allowance} />}
+      </aside>
+
+      {/* Results */}
+      <section className="flex-1 px-6 py-7 lg:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-[-0.02em]">
+              Open jobs near you
+            </h1>
+            <p className="mt-1 text-[13.5px] text-ink-500">
+              {openJobs === null
+                ? 'Loading…'
+                : `${results.length} ${results.length === 1 ? 'job' : 'jobs'} in ${contractor.serviceZips.join(', ')}`}
+              {matchedCount > 0 && ` · you have quoted on ${matchedCount}`}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSort((s) => (s === 'newest' ? 'oldest' : 'newest'))}
+              className="btn-small"
+            >
+              {sort === 'newest' ? 'Newest' : 'Oldest'} ⌄
+            </button>
+          </div>
+        </div>
+
+        {allowance && <div className="mt-5"><AllowanceBanner allowance={allowance} /></div>}
+
+        {error && (
+          <p className="mt-5 rounded-md border border-accent-edge bg-orange-50 px-4 py-3 text-[13px] font-semibold text-danger-text">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-[22px] grid gap-4 sm:grid-cols-2">
+          {openJobs === null ? (
+            <>
+              <JobCardSkeleton />
+              <JobCardSkeleton />
+            </>
+          ) : (
+            results.map((job) => <JobCard key={job.id} job={job} />)
+          )}
+        </div>
+
+        {openJobs !== null && results.length === 0 && (
+          <div className="mt-[22px] flex flex-col items-center rounded-lg border border-line bg-canvas px-6 py-14 text-center">
+            <Illustration src="/illustrations/step-quotes.png" size={140} />
+            <p className="mt-4 text-[15px] text-ink-500">
+              {openJobs.length === 0
+                ? `Nothing open in ${contractor.serviceZips.join(' or ')} right now.`
+                : 'No jobs match those filters.'}
+            </p>
+            {openJobs.length > 0 && (
+              <button
+                onClick={() => {
+                  setTypes([]);
+                  setTimeframes([]);
+                }}
+                className="btn-primary mt-5"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
+
+      </section>
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-        active
-          ? 'border-brand text-brand'
-          : 'border-transparent text-ink-soft hover:text-ink'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Banner({ message }: { message: string }) {
-  return (
-    <p className="mb-4 rounded-md bg-clay-soft px-4 py-3 text-sm text-clay">
-      {message}
-    </p>
   );
 }

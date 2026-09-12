@@ -24,6 +24,19 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   landscaping: 'Landscaping',
 };
 
+/** Relative age, as the cards and detail headers show it: 2h ago / yesterday. */
+export function formatRelative(iso: string, now: Date = new Date()): string {
+  const mins = Math.floor((now.getTime() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  return formatDate(iso);
+}
+
 export const TIMEFRAME_LABELS: Record<Timeframe, string> = {
   asap: 'As soon as possible',
   within_week: 'Within a week',
@@ -31,10 +44,18 @@ export const TIMEFRAME_LABELS: Record<Timeframe, string> = {
   flexible: 'Flexible',
 };
 
+/** Compact forms for cards, chips and segmented controls. */
+export const TIMEFRAME_SHORT: Record<Timeframe, string> = {
+  asap: 'ASAP',
+  within_week: 'This week',
+  within_month: 'This month',
+  flexible: 'Flexible',
+};
+
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   draft: 'Draft',
-  open: 'Open for quotes',
-  accepted: 'Matched',
+  open: 'Open',
+  accepted: 'Accepted',
   completed: 'Completed',
   cancelled: 'Cancelled',
   expired: 'Expired',

@@ -16,16 +16,11 @@
 
 import type { Contractor, Job, Quote, Subscription, User } from './types';
 
-/** Offline-safe placeholder photo: a tinted SVG data URL, no network needed. */
-function photo(label: string, hue: number): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
-    <rect width="400" height="300" fill="hsl(${hue} 45% 88%)"/>
-    <rect x="0" y="240" width="400" height="60" fill="hsl(${hue} 40% 78%)"/>
-    <text x="200" y="160" font-family="system-ui,sans-serif" font-size="22"
-          fill="hsl(${hue} 55% 32%)" text-anchor="middle">${label}</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg.replace(/\s+/g, ' '))}`;
-}
+/**
+ * Stand-in job photography, self-hosted in /public/photos. Documentary style:
+ * these are what a homeowner upload looks like. `job-5` deliberately has none,
+ * so the missing-photo placeholder is on screen without having to create a job.
+ */
 
 export const user1: User = {
   id: 'user1',
@@ -97,7 +92,7 @@ export const JOBS: Job[] = [
     city: 'San Francisco',
     zip: '94110',
     timeframe: 'within_week',
-    photos: [photo('Under-sink leak', 205)],
+    photos: ['/photos/kitchen-faucet.jpg'],
     status: 'open',
     createdAt: '2026-09-04T16:20:00.000Z',
     updatedAt: '2026-09-04T16:20:00.000Z',
@@ -132,7 +127,7 @@ export const JOBS: Job[] = [
     city: 'Palo Alto',
     zip: '94301',
     timeframe: 'within_month',
-    photos: [photo('Front lawn', 95)],
+    photos: ['/photos/back-yard.jpg'],
     status: 'open',
     createdAt: '2026-09-06T14:00:00.000Z',
     updatedAt: '2026-09-06T14:00:00.000Z',
@@ -149,7 +144,7 @@ export const JOBS: Job[] = [
     city: 'Palo Alto',
     zip: '94301',
     timeframe: 'asap',
-    photos: [photo('Deck exterior', 30)],
+    photos: ['/photos/garage-outlets.jpg'],
     // Already accepted: frozen for everyone, address unlocked for contractor2.
     status: 'accepted',
     createdAt: '2026-08-28T11:30:00.000Z',
@@ -172,6 +167,56 @@ export const JOBS: Job[] = [
     status: 'open',
     createdAt: '2026-09-09T08:15:00.000Z',
     updatedAt: '2026-09-09T08:15:00.000Z',
+  },
+  // job-6 onward exist so the contractor browse grid has something to be: each
+  // one matches an existing contractor's trades and service area.
+  {
+    id: 'job-6',
+    ownerId: 'user2',
+    type: 'plumbing',
+    title: 'Water heater leaking in basement',
+    description:
+      '40-gal gas unit, about nine years old, pooling water under the tank.',
+    street: '3129 Folsom St',
+    city: 'San Francisco',
+    zip: '94110',
+    timeframe: 'asap',
+    photos: ['/photos/water-heater.jpg', '/photos/detail-wide.jpg'],
+    status: 'open',
+    createdAt: '2026-09-10T07:40:00.000Z',
+    updatedAt: '2026-09-10T07:40:00.000Z',
+  },
+  {
+    id: 'job-7',
+    ownerId: 'user2',
+    type: 'electrical',
+    title: 'Install ceiling fan in nursery',
+    description:
+      'No existing box. Second floor, 9ft ceiling, fan already purchased.',
+    street: '870 Folsom St, Unit 12',
+    city: 'San Francisco',
+    zip: '94103',
+    timeframe: 'flexible',
+    photos: ['/photos/ceiling-fan.jpg'],
+    status: 'open',
+    createdAt: '2026-09-08T15:10:00.000Z',
+    updatedAt: '2026-09-08T15:10:00.000Z',
+  },
+  {
+    id: 'job-8',
+    ownerId: 'user2',
+    type: 'landscaping',
+    title: 'Trim two live oaks',
+    description:
+      'Branches over the roofline, one limb touching the power drop.',
+    street: '212 Kingsley Ave',
+    city: 'Palo Alto',
+    zip: '94301',
+    timeframe: 'asap',
+    photos: ['/photos/live-oaks.jpg'],
+    status: 'open',
+    createdAt: '2026-09-08T12:00:00.000Z',
+    updatedAt: '2026-09-08T12:00:00.000Z',
   },
 ];
 

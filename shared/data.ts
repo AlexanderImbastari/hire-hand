@@ -164,6 +164,9 @@ function toPublicView(
     photos: job.photos,
     status: job.status,
     createdAt: job.createdAt,
+    quoteCount: quotes.filter(
+      (q) => q.jobId === job.id && q.status !== 'withdrawn',
+    ).length,
     myQuote: mine ? toQuoteView(mine) : undefined,
   };
   if (canSeeExactLocation(session, job, quotes)) {

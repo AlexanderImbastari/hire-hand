@@ -1,109 +1,164 @@
 @import "tailwindcss";
 
-/* HireHand — warm paper surfaces, deep teal for action, clay for attention.
-   Trade-services feel: legible, a little utilitarian, not a SaaS template. */
+/* HireHand design system — warm-neutral surfaces, near-black ink, one orange
+   accent. Tokens are the whole palette: nothing outside this list. Spec lives
+   in prompts/context/design.md.
+
+   Light-only by design. "Dark" here is a compositional device (ink-900 panels
+   mark contractor-facing/commercial moments), not a colour scheme, so there is
+   no prefers-color-scheme block. */
+@theme {
+  /* accent — one action per view */
+  --color-orange-500: #ff5a36;
+  --color-orange-600: #e44a28;
+  --color-orange-50: #fff1ec;
+
+  /* ink */
+  --color-ink-900: #141210;
+  --color-ink-800: #1f1b17;
+  --color-ink-700: #3c3833;
+  --color-ink-500: #6b665f;
+  --color-ink-400: #8a8278;
+
+  /* structure */
+  --color-line: #e6e3de;
+  --color-line-strong: #cfcac2;
+  --color-surface: #f5f3f0;
+  --color-surface-alt: #faf9f7;
+  --color-canvas: #ffffff;
+  --color-dark-line: #332d26;
+
+  /* status */
+  --color-success-700: #2f6b45;
+  --color-success-50: #edf3ee;
+  --color-info-700: #3c4a5e;
+  --color-info-50: #edeff3;
+  --color-danger-text: #c4451f;
+
+  /* support — values the screen specs name, tokenised so no hex is scattered */
+  --color-on-dark: #d8d3cb; /* body text on ink-900 */
+  --color-on-dark-muted: #a9a399; /* secondary text on ink-900 */
+  --color-on-dark-eyebrow: #ffb49f; /* eyebrow on ink-900 / photo */
+  --color-on-dark-line: #3a342d; /* ghost pill border on ink-900 */
+  --color-rule: #f0ede9; /* card footer rules, avatars, skeletons */
+  --color-disabled: #edeae5; /* disabled button fill */
+  --color-photo-dark: #1b1815; /* dark photo placeholder */
+  --color-photo-tint: #f3f1ed; /* image band behind a photo; stripe light */
+  --color-photo-stripe: #e8e5e1; /* stripe dark, for missing-photo placeholders */
+  --color-accent-edge: #ffd3c6; /* quote-meter card border */
+  --color-accent-ink: #7a5647; /* quote-meter supporting copy */
+  --color-accent-wash: #fff7f4; /* selected tile fill */
+
+  /* type */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* radius */
+  --radius-sm: 9px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+
+  /* elevation — floating elements only; everything else uses a border */
+  --shadow-card: 0 12px 30px rgba(20, 18, 16, 0.06);
+  --shadow-float: 0 18px 40px rgba(20, 18, 16, 0.14);
+}
+
 :root {
-  --paper: #f7f4ef;
-  --surface: #fffdfa;
-  --surface-sunken: #efe9e0;
-  --ink: #1f1b16;
-  --ink-soft: #6b6157;
-  --line: #e0d7ca;
-  --brand: #0e6a62;
-  --brand-soft: #d9ece9;
-  --brand-ink: #0a4f49;
-  --clay: #b4552b;
-  --clay-soft: #f8e6dc;
-  --gold: #a67c00;
-  --gold-soft: #f7eccd;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #17140f;
-    --surface: #201c16;
-    --surface-sunken: #2a251d;
-    --ink: #f3ede3;
-    --ink-soft: #a79c8d;
-    --line: #383127;
-    --brand: #4fb3a6;
-    --brand-soft: #10322f;
-    --brand-ink: #8fd5ca;
-    --clay: #e0885f;
-    --clay-soft: #3a231a;
-    --gold: #d9ab3c;
-    --gold-soft: #35291068;
-  }
-}
-
-@theme inline {
-  --color-paper: var(--paper);
-  --color-surface: var(--surface);
-  --color-sunken: var(--surface-sunken);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-line: var(--line);
-  --color-brand: var(--brand);
-  --color-brand-soft: var(--brand-soft);
-  --color-brand-ink: var(--brand-ink);
-  --color-clay: var(--clay);
-  --color-clay-soft: var(--clay-soft);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
+  color-scheme: light;
 }
 
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .card {
-    @apply rounded-lg border border-line bg-surface;
+    @apply rounded-lg border border-line bg-canvas;
   }
 
   /* Tailwind 4 will not @apply a custom class, so the shared button base is a
      grouped selector rather than a `.btn` the variants extend. */
   .btn,
   .btn-primary,
+  .btn-dark,
   .btn-secondary,
-  .btn-ghost,
-  .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2
-           text-sm font-medium transition-colors disabled:cursor-not-allowed
-           disabled:opacity-45;
+  .btn-pill-primary,
+  .btn-pill-dark,
+  .btn-pill-ghost,
+  .btn-small {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2
+           whitespace-nowrap transition-colors duration-150 ease-out
+           disabled:pointer-events-none disabled:bg-disabled
+           disabled:text-ink-400;
   }
+
+  .btn,
+  .btn-primary,
+  .btn-dark,
+  .btn-secondary {
+    @apply rounded-md px-[22px] py-[13px] text-sm font-bold;
+  }
+
   .btn-primary {
-    @apply bg-brand text-white hover:bg-brand-ink;
+    @apply bg-orange-500 text-white hover:bg-orange-600;
+  }
+  .btn-dark {
+    @apply bg-ink-900 text-white hover:bg-ink-800;
   }
   .btn-secondary {
-    @apply border border-line bg-surface text-ink hover:bg-sunken;
+    @apply border border-line-strong bg-canvas font-semibold text-ink-900
+           hover:border-ink-900;
   }
-  .btn-ghost {
-    @apply text-ink-soft hover:bg-sunken hover:text-ink;
+
+  /* Pills are marketing and nav only. */
+  .btn-pill-primary,
+  .btn-pill-dark,
+  .btn-pill-ghost {
+    @apply rounded-full px-4 py-2.5 text-[13px] font-bold;
   }
-  .btn-danger {
-    @apply border border-clay/40 text-clay hover:bg-clay-soft;
+  .btn-pill-primary {
+    @apply bg-orange-500 text-white hover:bg-orange-600;
+  }
+  .btn-pill-dark {
+    @apply bg-ink-900 text-white hover:bg-ink-800;
+  }
+  .btn-pill-ghost {
+    @apply border border-on-dark-line text-white hover:border-white;
+  }
+
+  .btn-small {
+    @apply rounded-sm border border-line px-3.5 py-2.5 text-[13px] font-semibold
+           text-ink-900 hover:border-ink-900;
   }
 
   .field {
-    @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm
-           text-ink outline-none placeholder:text-ink-soft/60
-           focus:border-brand focus:ring-2 focus:ring-brand/20;
+    @apply w-full rounded-md border border-line bg-canvas px-4 py-3.5 text-sm
+           text-ink-900 outline-none transition-colors duration-150
+           placeholder:text-ink-400 focus:border-ink-900;
   }
-  .label {
-    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide
-           text-ink-soft;
+  .field-error {
+    @apply border-orange-500;
   }
 
-  .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
-           font-medium;
+  .label {
+    @apply mb-2 block text-[11.5px] font-bold uppercase tracking-[0.08em]
+           text-ink-400;
   }
 
   .meta {
-    @apply text-sm text-ink-soft;
+    @apply text-[12.5px] font-semibold text-ink-500;
+  }
+
+  /* The one treatment every 3D render ships with. The brightness/contrast pass
+     clips the render's near-white studio ground to true white so `multiply`
+     cancels it against the card behind; drop it and a hard grey box appears. */
+  .illus {
+    object-fit: contain;
+    filter: brightness(1.14) contrast(1.05);
+    mix-blend-mode: multiply;
   }
 }

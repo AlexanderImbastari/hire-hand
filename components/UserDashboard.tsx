@@ -1,204 +1,150 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
   acceptQuote,
-  cancelJob,
-  completeJob,
-  createJob,
   deleteJob,
   listJobsForUser,
   publishJob,
-  updateJob,
 } from '@/shared/data';
-import { formatDate, JOB_TYPE_LABELS, TIMEFRAME_LABELS } from '@/shared/format';
-import type { JobInput, JobOwnerView } from '@/shared/types';
-import { JobForm } from './JobForm';
+import type { JobOwnerView } from '@/shared/types';
+import { ConfirmDialog } from './ConfirmDialog';
 import { OwnerJobDetail } from './OwnerJobDetail';
 import { useRequiredSession } from './SessionProvider';
-import { JobStatusBadge } from './StatusBadge';
+import { Illustration } from './ui/Field';
 
-type View =
-  | { name: 'list' }
-  | { name: 'create' }
-  | { name: 'edit'; jobId: string }
-  | { name: 'detail'; jobId: string };
+type Pending =
+  | { kind: 'accept'; jobId: string; quoteId: string }
+  | { kind: 'delete'; jobId: string }
+  | null;
 
+/** The homeowner's jobs. No pricing, upsell or billing UI ever appears here. */
 export function UserDashboard() {
   const { session, revision, refresh } = useRequiredSession();
-  const [jobs, setJobs] = useState<JobOwnerView[]>([]);
-  const [view, setView] = useState<View>({ name: 'list' });
+  const [jobs, setJobs] = useState<JobOwnerView[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [pending, setPending] = useState<Pending>(null);
 
   useEffect(() => {
-    listJobsForUser(session).then(setJobs).catch((e) => setError(e.message));
+    let live = true;
+    listJobsForUser(session)
+      .then((list) => live && setJobs(list))
+      .catch((e) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
   }, [session, revision]);
 
-  /** Wrap a write so failures surface as a message instead of a blank screen. */
   const run = useCallback(
-    async (fn: () => Promise<unknown>, after?: () => void) => {
+    async (fn: () => Promise<unknown>) => {
       setBusy(true);
       setError('');
       try {
         await fn();
-        after?.();
         refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(false);
+        setPending(null);
       }
     },
     [refresh],
   );
 
-  const selected =
-    view.name === 'detail' || view.name === 'edit'
-      ? jobs.find((j) => j.id === view.jobId)
-      : undefined;
+  const counts = {
+    open: jobs?.filter((j) => j.status === 'open').length ?? 0,
+    accepted: jobs?.filter((j) => j.status === 'accepted').length ?? 0,
+    draft: jobs?.filter((j) => j.status === 'draft').length ?? 0,
+  };
 
-  if (view.name === 'create') {
-    return (
-      <>
-        {error && <Banner message={error} />}
-        <JobForm
-          busy={busy}
-          onCancel={() => setView({ name: 'list' })}
-          onSubmit={(input: JobInput, publish) =>
-            run(
-              () => createJob(session, input, { publish }),
-              () => setView({ name: 'list' }),
-            )
-          }
-        />
-      </>
-    );
-  }
-
-  if (view.name === 'edit' && selected) {
-    return (
-      <>
-        {error && <Banner message={error} />}
-        <JobForm
-          initial={selected}
-          busy={busy}
-          onCancel={() => setView({ name: 'detail', jobId: selected.id })}
-          onSubmit={(input) =>
-            run(
-              () => updateJob(session, selected.id, input),
-              () => setView({ name: 'detail', jobId: selected.id }),
-            )
-          }
-        />
-      </>
-    );
-  }
-
-  if (view.name === 'detail' && selected) {
-    return (
-      <>
-        {error && <Banner message={error} />}
-        <OwnerJobDetail
-          job={selected}
-          busy={busy}
-          onBack={() => setView({ name: 'list' })}
-          onEdit={() => setView({ name: 'edit', jobId: selected.id })}
-          onPublish={() => run(() => publishJob(session, selected.id))}
-          onCancelJob={() => run(() => cancelJob(session, selected.id))}
-          onComplete={() => run(() => completeJob(session, selected.id))}
-          onDelete={() =>
-            run(
-              () => deleteJob(session, selected.id),
-              () => setView({ name: 'list' }),
-            )
-          }
-          onAccept={(quoteId) =>
-            run(() => acceptQuote(session, selected.id, quoteId))
-          }
-        />
-      </>
-    );
-  }
+  const summary = [
+    `${counts.open} open`,
+    counts.draft > 0 ? `${counts.draft} draft` : null,
+    `${counts.accepted} accepted`,
+    'posting is always free',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="px-6 pb-16 pt-8 sm:px-12">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your jobs</h1>
-          <p className="meta mt-1">
-            Post what you need done and pick the quote you like.
+          <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">
+            Your jobs
+          </h1>
+          <p className="mt-1 text-[13.5px] text-ink-500">
+            {jobs === null ? 'Loading…' : summary}
           </p>
         </div>
-        <button
-          className="btn-primary"
-          onClick={() => setView({ name: 'create' })}
-        >
-          + Post a job
-        </button>
+        <Link href="/jobs/new" className="btn-pill-dark">
+          + Post a new job
+        </Link>
       </div>
 
-      {error && <Banner message={error} />}
+      {error && (
+        <p className="mt-5 rounded-md border border-accent-edge bg-orange-50 px-4 py-3 text-[13px] font-semibold text-danger-text">
+          {error}
+        </p>
+      )}
 
-      {jobs.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-medium">No jobs yet</p>
-          <p className="meta mx-auto mt-2 max-w-sm">
-            Post your first job and contractors working in your area will be
-            able to quote on it.
+      {jobs === null ? (
+        <div className="mt-6 h-32 animate-pulse rounded-lg bg-rule" />
+      ) : jobs.length === 0 ? (
+        <div className="mt-6 flex flex-col items-center rounded-lg border border-line bg-canvas px-6 py-16 text-center">
+          <Illustration src="/illustrations/step-post.png" size={140} />
+          <p className="mt-4 text-[15px] text-ink-500">
+            No jobs yet. Posting one takes about two minutes.
           </p>
-          <button
-            className="btn-primary mt-5"
-            onClick={() => setView({ name: 'create' })}
-          >
+          <Link href="/jobs/new" className="btn-primary mt-5">
             Post a job
-          </button>
+          </Link>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {jobs.map((job) => {
-            const pending = job.quotes.filter(
-              (q) => q.status === 'pending',
-            ).length;
-            return (
-              <button
-                key={job.id}
-                onClick={() => setView({ name: 'detail', jobId: job.id })}
-                className="card p-5 text-left transition-colors hover:border-brand"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="meta text-xs uppercase tracking-wide">
-                      {JOB_TYPE_LABELS[job.type]} · {job.city}, {job.zip}
-                    </p>
-                    <p className="mt-1 font-medium">{job.title}</p>
-                  </div>
-                  <JobStatusBadge status={job.status} />
-                </div>
-                <div className="meta mt-3 flex flex-wrap gap-x-4 text-xs">
-                  <span>{TIMEFRAME_LABELS[job.timeframe]}</span>
-                  <span>Posted {formatDate(job.createdAt)}</span>
-                  <span>
-                    {job.status === 'draft'
-                      ? 'Not visible to contractors'
-                      : `${job.quotes.length} quote${
-                          job.quotes.length === 1 ? '' : 's'
-                        }${pending ? ` · ${pending} awaiting you` : ''}`}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+        <div className="mt-6 flex flex-col gap-4">
+          {jobs.map((job) => (
+            <OwnerJobDetail
+              key={job.id}
+              job={job}
+              busy={busy}
+              onAccept={(jobId, quoteId) =>
+                setPending({ kind: 'accept', jobId, quoteId })
+              }
+              onDelete={(jobId) => setPending({ kind: 'delete', jobId })}
+              onPublish={(jobId) => run(() => publishJob(session, jobId))}
+            />
+          ))}
         </div>
       )}
-    </div>
-  );
-}
 
-function Banner({ message }: { message: string }) {
-  return (
-    <p className="mb-4 rounded-md bg-clay-soft px-4 py-3 text-sm text-clay">
-      {message}
-    </p>
+      <ConfirmDialog
+        open={pending?.kind === 'accept'}
+        title="Accept this quote?"
+        body="This locks in that contractor and shares your exact address and contact details with them. The job closes to other quotes and can no longer be edited."
+        confirmLabel="Accept quote"
+        busy={busy}
+        onCancel={() => setPending(null)}
+        onConfirm={() =>
+          pending?.kind === 'accept' &&
+          run(() => acceptQuote(session, pending.jobId, pending.quoteId))
+        }
+      />
+
+      <ConfirmDialog
+        open={pending?.kind === 'delete'}
+        title="Delete this job?"
+        body="The job and any quotes on it are removed. This cannot be undone."
+        confirmLabel="Delete job"
+        busy={busy}
+        onCancel={() => setPending(null)}
+        onConfirm={() =>
+          pending?.kind === 'delete' &&
+          run(() => deleteJob(session, pending.jobId))
+        }
+      />
+    </div>
   );
 }

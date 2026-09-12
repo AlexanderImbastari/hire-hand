@@ -132,6 +132,11 @@ export interface JobPublicView {
   photos: string[];
   status: JobStatus;
   createdAt: string;
+  /**
+   * How many live quotes the job has. Competitive signal, not a rival's price —
+   * the amounts stay invisible.
+   */
+  quoteCount: number;
   /** Present only once this contractor has won the job. */
   exactLocation?: ExactLocation;
   /** This contractor's own quote on the job, if any. Never anyone else's. */

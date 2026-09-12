@@ -34,8 +34,18 @@ with Postgres queries and RLS policies without changing a single signature, so
 nothing above it needs to change.
 
 ```
-app/          Next.js App Router shell. One route; the product is a client-rendered SPA.
+app/          Next.js App Router. Real routes; SessionProvider sits in the root layout.
+  page.tsx       Landing (public, server component)
+  pricing/       Plans (contractor-facing; homeowners get redirected)
+  login/         Phase-1 identity picker
+  jobs/          Contractor browse
+  jobs/[id]/     Contractor job detail + quote panel
+  jobs/new/      Homeowner post-a-job (also ?edit=<id>)
+  dashboard/     Homeowner jobs + quotes received
+  quotes/        Contractor's own quotes
+  styleguide/    Internal design-system reference (not product surface)
 components/   All UI. Imports data only through shared/data.ts.
+  ui/            Design-system primitives (Logo, Field, Illustration)
 shared/       Platform-agnostic domain core — no React, no Next. A mobile app reuses it verbatim.
   types.ts       Domain rows + the viewer-scoped view types
   fixtures.ts    The four phase-1 identities and seed jobs/quotes
@@ -44,10 +54,14 @@ shared/       Platform-agnostic domain core — no React, no Next. A mobile app 
   data.ts        The API: takes a Session, applies policy, returns redacted views
   session.ts     Phase-1 sign-in as an external store (useSyncExternalStore)
   format.ts      Display helpers
+public/       Self-hosted assets: brand marks, 3D illustrations, job photography.
 scripts/      verify-rules.ts — headless domain assertions
-prompts/      The original spec. Domain + offer catalog live in prompts/context/.
+prompts/      The original spec. Domain, offer catalog and design system live in prompts/context/.
 docs/         Build notes, dated.
 ```
+
+Routes are guarded by `RequireUser` / `RequireContractor` in `components/App.tsx`.
+An unapproved contractor is stopped there, at the route — not by hiding UI.
 
 ### Three invariants worth preserving
 
@@ -90,7 +104,8 @@ callers. Don't "simplify" these to sync functions.
 Lifecycle: `draft → open → accepted → completed`, with `cancelled` / `expired` as
 other terminal states. CRUD is allowed only in `draft` and `open`.
 
-The full specs are `prompts/context/domain.md` and `prompts/context/offer_catalog.md`
+The full specs are `prompts/context/domain.md`, `prompts/context/offer_catalog.md`
+and `prompts/context/design.md`
 (note: those documents refer to themselves as `context/*.md`; they actually live under
 `prompts/`). The offer catalog carries the reasoning behind the pricing model — read it
 before changing anything about what is gated, and note its instruction not to add
@@ -103,15 +118,32 @@ billing surface area without asking.
   `components/DevPanel.tsx` — a test harness for approval and billing states, since
   neither Stripe nor the approval workflow exists yet. Not product surface.
 - `shared/session.ts` — replaced by real auth
+- `/styleguide` — internal reference; it is not a product route
+- The landing page's per-trade open-job counts are marketing figures. There is no
+  un-authenticated aggregate in the data layer; wire them to one in phase 2.
+- Job photos posted through the form are downscaled to data URLs so they fit
+  `localStorage`. Real uploads land in phase 2 (`JobPhoto` already branches on `data:`).
 
 ## Conventions
 
-- Tailwind 4. Shared classes (`.card`, `.btn-*`, `.field`, `.badge`, `.meta`) are in
+- **The design system is `prompts/context/design.md`** — read it before changing
+  anything visual. Tokens are the whole palette: one orange accent, ink greys, four
+  radii, two shadows. Nothing outside that list.
+- Tailwind 4, so tokens are declared in `@theme` in `app/globals.css` rather than a
+  `tailwind.config.ts`. Use them (`bg-surface`, `text-ink-500`, `border-line`) instead
+  of raw Tailwind palette colours or hex.
+- Shared classes (`.card`, `.btn-*`, `.field`, `.label`, `.meta`, `.illus`) live in
   `app/globals.css`. Tailwind 4 will not `@apply` a custom class, so the button base
   is a grouped selector rather than a `.btn` the variants extend.
-- Colors are CSS variables mapped through `@theme inline`, with a dark-mode block.
-  Use the tokens (`bg-surface`, `text-ink-soft`, `border-line`) rather than raw
-  Tailwind palette colors, so both themes stay correct.
+- Light-only. "Dark" is a compositional device — `ink-900` panels mark
+  contractor-facing or commercial moments, max two per page — not a colour scheme, so
+  there is no `prefers-color-scheme` block.
+- Orange marks exactly one primary action per view. Never two orange buttons in a block.
+- Every 3D illustration carries `.illus` (`brightness(1.14) contrast(1.05)` +
+  `mix-blend-mode: multiply`). Dropping it leaves a hard grey box — it is not optional.
+  Check new assets on a white *and* a `surface` card.
+- Fonts are Manrope + JetBrains Mono via `next/font`; use `font-mono` for IDs, counts
+  and step numbers only.
 - ESLint runs React's compiler rules; `setState` directly in an effect body is an
   error. Derive state during render, or drive it from an external store.
 

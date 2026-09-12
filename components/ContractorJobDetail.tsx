@@ -1,171 +1,162 @@
 'use client';
 
-import {
-  formatDate,
-  formatPrice,
-  JOB_TYPE_LABELS,
-  TIMEFRAME_LABELS,
-} from '@/shared/format';
+import Link from 'next/link';
+import { formatRelative, TIMEFRAME_LABELS } from '@/shared/format';
 import type { JobPublicView, QuoteAllowance } from '@/shared/types';
-import { AllowanceBanner } from './AllowanceBanner';
+import { JobPhoto } from './JobPhoto';
 import { QuoteForm } from './QuoteForm';
-import { JobStatusBadge, QuoteStatusBadge } from './StatusBadge';
+import { JobTypeTag, StatusTag } from './StatusBadge';
 
-interface Props {
-  job: JobPublicView;
-  allowance: QuoteAllowance;
-  busy: boolean;
-  onBack: () => void;
-  onQuote: (priceCents: number, message: string) => void;
-  onWithdraw: (quoteId: string) => void;
-}
-
+/**
+ * Contractor-facing job detail.
+ *
+ * Browsing is never gated: full detail and every photo, no blur and no overlay.
+ * The exact address and contact details are absent from `JobPublicView`
+ * entirely until this contractor wins the job — they are not rendered and
+ * hidden, there is nothing to render.
+ */
 export function ContractorJobDetail({
   job,
   allowance,
   busy,
-  onBack,
   onQuote,
   onWithdraw,
-}: Props) {
-  const canStillQuote = job.status === 'open' && !job.myQuote;
+}: {
+  job: JobPublicView;
+  allowance: QuoteAllowance;
+  busy: boolean;
+  onQuote: (priceCents: number, message: string) => void;
+  onWithdraw: (quoteId: string) => void;
+}) {
+  const [lead, ...rest] = job.photos;
 
   return (
-    <div className="grid gap-6">
-      <button className="btn-ghost w-fit px-0 text-sm" onClick={onBack}>
-        ← Back
-      </button>
+    <div className="px-6 pb-16 pt-7 sm:px-12">
+      <Link
+        href="/jobs"
+        className="text-[13px] font-semibold text-ink-500 transition-colors duration-150 hover:text-ink-900"
+      >
+        ← Back to open jobs
+      </Link>
 
-      <div className="card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="meta text-xs uppercase tracking-wide">
-              {JOB_TYPE_LABELS[job.type]}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              {job.title}
-            </h1>
+      <div className="mt-[18px] grid gap-8 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_400px]">
+        <div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <JobTypeTag type={job.type} />
+            <StatusTag status={job.status} />
+            <span className="text-[12.5px] text-ink-400">
+              Posted {formatRelative(job.createdAt)}
+            </span>
           </div>
-          <JobStatusBadge status={job.status} />
-        </div>
 
-        <p className="mt-4 whitespace-pre-line">{job.description}</p>
+          <h1 className="mt-3.5 text-[28px] font-extrabold tracking-[-0.025em] sm:text-[34px]">
+            {job.title}
+          </h1>
 
-        <dl className="mt-6 grid gap-4 border-t border-line pt-5 sm:grid-cols-3">
-          <div>
-            <dt className="label">Timeframe</dt>
-            <dd className="text-sm">{TIMEFRAME_LABELS[job.timeframe]}</dd>
+          {/* One large photo, the rest stacked beside it. */}
+          <div
+            className={`mt-5 grid h-[300px] grid-cols-1 gap-2.5 ${
+              rest.length > 0 ? 'sm:grid-cols-[2fr_1fr]' : ''
+            }`}
+          >
+            <JobPhoto
+              src={lead}
+              alt={job.title}
+              sizes="(max-width: 640px) 100vw, 600px"
+              caption="No photo provided"
+              priority
+              className="h-full w-full rounded-[14px]"
+            />
+            {rest.length > 0 && (
+              <div
+                className={`hidden gap-2.5 sm:grid ${
+                  rest.length === 1 ? 'grid-rows-1' : 'grid-rows-2'
+                }`}
+              >
+                {rest.slice(0, 2).map((src, i) => (
+                  <JobPhoto
+                    key={src}
+                    src={src}
+                    alt={`${job.title} — photo ${i + 2}`}
+                    sizes="300px"
+                    className="h-full w-full rounded-[14px]"
+                  />
+                ))}
+              </div>
+            )}
           </div>
-          <div>
-            <dt className="label">Location</dt>
-            <dd className="text-sm">
-              {job.city}, {job.zip}
-              {!job.exactLocation && (
-                <span className="meta block text-xs">
-                  Exact address shared once your quote is accepted
-                </span>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="label">Posted</dt>
-            <dd className="text-sm">{formatDate(job.createdAt)}</dd>
-          </div>
-        </dl>
 
-        {job.photos.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-3">
-            {job.photos.map((src, i) => (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                key={i}
-                src={src}
-                alt={`Job photo ${i + 1}`}
-                className="h-28 w-40 rounded-md border border-line object-cover"
-              />
-            ))}
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <Stat label="Timeframe" value={TIMEFRAME_LABELS[job.timeframe]} />
+            <Stat label="Location" value={`${job.city} ${job.zip}`} />
+            <Stat
+              label="Quotes so far"
+              value={`${job.quoteCount} submitted`}
+            />
           </div>
-        )}
-      </div>
 
-      {/* Only present when this contractor won the job — the data layer omits
-          the field entirely otherwise. */}
-      {job.exactLocation && (
-        <div className="card border-brand p-6">
-          <h2 className="font-semibold">You won this job</h2>
-          <p className="meta mt-1">
-            The homeowner accepted your quote, so their address and contact
-            details are unlocked.
+          <h2 className="mt-[30px] text-lg font-bold">Job description</h2>
+          <p className="mt-2.5 max-w-[680px] text-[15px] leading-[1.65] text-ink-700">
+            {job.description}
           </p>
-          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="label">Address</dt>
-              <dd className="text-sm">
-                {job.exactLocation.street}
-                <br />
-                {job.exactLocation.city}, {job.exactLocation.zip}
-              </dd>
-            </div>
-            <div>
-              <dt className="label">Contact</dt>
-              <dd className="text-sm">
-                {job.exactLocation.contactName}
-                <br />
-                {job.exactLocation.contactPhone}
-                <br />
-                {job.exactLocation.contactEmail}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      )}
 
-      {job.myQuote && (
-        <div className="card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Your quote</h2>
-              <p className="meta mt-0.5">
-                Sent {formatDate(job.myQuote.createdAt)}
+          {job.exactLocation ? (
+            <div className="mt-[22px] rounded-[13px] border border-line bg-surface-alt p-[18px]">
+              <p className="label mb-3">Address and contact — unlocked for you</p>
+              <p className="text-[15px] font-bold">{job.exactLocation.street}</p>
+              <p className="text-[13.5px] text-ink-500">
+                {job.exactLocation.city} {job.exactLocation.zip}
+              </p>
+              <p className="mt-3 text-[13.5px] text-ink-700">
+                {job.exactLocation.contactName} ·{' '}
+                <a
+                  href={`tel:${job.exactLocation.contactPhone}`}
+                  className="font-semibold text-orange-500 hover:text-orange-600"
+                >
+                  {job.exactLocation.contactPhone}
+                </a>{' '}
+                ·{' '}
+                <a
+                  href={`mailto:${job.exactLocation.contactEmail}`}
+                  className="font-semibold text-orange-500 hover:text-orange-600"
+                >
+                  {job.exactLocation.contactEmail}
+                </a>
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold">
-                {formatPrice(job.myQuote.priceCents)}
+          ) : (
+            <div className="mt-[22px] flex items-center gap-3 rounded-[13px] border border-dashed border-line-strong bg-surface-alt px-[18px] py-4">
+              <span aria-hidden className="text-base">
+                🔒
+              </span>
+              <p className="text-[13.5px] leading-[1.5] text-ink-500">
+                Exact address and contact details unlock for you the moment this
+                homeowner accepts your quote. Free and Pro contractors alike.
               </p>
-              <QuoteStatusBadge status={job.myQuote.status} />
             </div>
-          </div>
-          <p className="mt-3 whitespace-pre-line text-sm">
-            {job.myQuote.message}
-          </p>
-          {job.status === 'open' && job.myQuote.status === 'pending' && (
-            <button
-              className="btn-danger mt-4"
-              disabled={busy}
-              onClick={() => onWithdraw(job.myQuote!.id)}
-            >
-              Withdraw quote
-            </button>
           )}
-          <p className="meta mt-3 text-xs">
-            Other contractors&rsquo; prices on this job are never shown to you.
-          </p>
         </div>
-      )}
 
-      {canStillQuote && (
-        <div className="grid gap-3">
-          <AllowanceBanner allowance={allowance} />
-          {allowance.canQuote && <QuoteForm busy={busy} onSubmit={onQuote} />}
+        <div>
+          <QuoteForm
+            allowance={allowance}
+            myQuote={job.myQuote}
+            jobOpen={job.status === 'open'}
+            busy={busy}
+            onSubmit={onQuote}
+            onWithdraw={onWithdraw}
+          />
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
 
-      {job.status !== 'open' && !job.exactLocation && (
-        <p className="card p-5 meta">
-          This job is no longer open for quotes.
-        </p>
-      )}
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[13px] border border-line p-4">
+      <p className="label mb-0">{label}</p>
+      <p className="mt-1.5 text-[15px] font-bold">{value}</p>
     </div>
   );
 }

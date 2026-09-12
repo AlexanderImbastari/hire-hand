@@ -6,6 +6,7 @@ import {
   devSetSubscription,
   getSubscription,
 } from '@/shared/data';
+import { resetDemoData } from '@/shared/storage';
 import type { Contractor, Subscription } from '@/shared/types';
 import { useSession } from './SessionProvider';
 
@@ -22,7 +23,9 @@ export function DevPanel({ contractor }: { contractor: Contractor }) {
 
   useEffect(() => {
     if (!session) return;
-    getSubscription(session).then(setSubscription).catch(() => setSubscription(null));
+    getSubscription(session)
+      .then(setSubscription)
+      .catch(() => setSubscription(null));
   }, [session, revision]);
 
   async function setBilling(status: Subscription['status'] | 'none') {
@@ -33,13 +36,10 @@ export function DevPanel({ contractor }: { contractor: Contractor }) {
   const current = subscription?.status ?? 'none';
 
   return (
-    <div className="border-b border-line bg-sunken">
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3 text-xs">
-        <span className="font-semibold uppercase tracking-wide text-ink-soft">
-          Demo controls
-        </span>
-
-        <label className="flex items-center gap-2">
+    <div className="rounded-lg border border-line bg-surface-alt p-5">
+      <p className="label">Demo controls — {contractor.company}</p>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[12.5px]">
+        <label className="flex cursor-pointer items-center gap-2 font-semibold">
           <input
             type="checkbox"
             checked={contractor.approved}
@@ -51,16 +51,16 @@ export function DevPanel({ contractor }: { contractor: Contractor }) {
           Approved
         </label>
 
-        <div className="flex items-center gap-2">
-          <span className="text-ink-soft">Contractor Pro:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ink-500">Contractor Pro:</span>
           {(['none', 'active', 'past_due', 'cancelled'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setBilling(s)}
-              className={`rounded px-2 py-1 ${
+              className={`cursor-pointer rounded-sm px-2.5 py-1.5 font-semibold transition-colors duration-150 ${
                 current === s
-                  ? 'bg-brand text-white'
-                  : 'border border-line bg-surface hover:bg-sunken'
+                  ? 'bg-ink-900 text-white'
+                  : 'border border-line bg-canvas hover:border-ink-900'
               }`}
             >
               {s === 'none' ? 'No sub' : s.replace('_', ' ')}
@@ -68,9 +68,19 @@ export function DevPanel({ contractor }: { contractor: Contractor }) {
           ))}
         </div>
 
-        <span className="text-ink-soft">
+        <span className="text-ink-500">
           Lifetime free quotes used: {contractor.freeQuotesUsed}
         </span>
+
+        <button
+          onClick={() => {
+            resetDemoData();
+            refresh();
+          }}
+          className="cursor-pointer rounded-sm border border-line bg-canvas px-2.5 py-1.5 font-semibold transition-colors duration-150 hover:border-ink-900"
+        >
+          Reset demo data
+        </button>
       </div>
     </div>
   );
